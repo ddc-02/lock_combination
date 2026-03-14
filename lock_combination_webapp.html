@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3-Digit Combination Tracker</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap');
+
+    :root {
+      --bg-1: #f7f2e9;
+      --bg-2: #e8efe5;
+      --ink: #192126;
+      --card: #fffdf8;
+      --accent: #1f6f78;
+      --accent-2: #f28f3b;
+      --ok: #0f9d58;
+      --danger: #c93c20;
+      --muted: #5a646c;
+      --line: #d7ddd4;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Space Grotesk", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 15%, rgba(242, 143, 59, 0.18), transparent 35%),
+        radial-gradient(circle at 85% 75%, rgba(31, 111, 120, 0.2), transparent 30%),
+        linear-gradient(120deg, var(--bg-1), var(--bg-2));
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+
+    .app {
+      width: min(920px, 100%);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      box-shadow: 0 16px 32px rgba(15, 30, 35, 0.12);
+      overflow: hidden;
+      animation: rise-in 0.65s ease;
+    }
+
+    .header {
+      background: linear-gradient(110deg, #1f6f78 0%, #2b8a94 60%, #f28f3b 60%, #f2b13b 100%);
+      color: #ffffff;
+      padding: 22px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-family: "Fraunces", serif;
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      line-height: 1.1;
+      letter-spacing: 0.4px;
+    }
+
+    .header p {
+      margin: 8px 0 0;
+      font-size: 0.96rem;
+      max-width: 54ch;
+    }
+
+    .content {
+      display: grid;
+      gap: 18px;
+      padding: 22px;
+    }
+
+    .panel {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    .input-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .input-row input {
+      width: 160px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid #b5c3ba;
+      font-size: 1rem;
+      letter-spacing: 0.25em;
+      text-align: center;
+      font-family: "Space Grotesk", sans-serif;
+    }
+
+    .input-row input:focus {
+      outline: 2px solid rgba(31, 111, 120, 0.3);
+      border-color: var(--accent);
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 11px 14px;
+      font-weight: 700;
+      font-family: "Space Grotesk", sans-serif;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.2s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    .add-btn {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .clear-btn {
+      background: #ece7de;
+      color: var(--ink);
+    }
+
+    .status {
+      margin-top: 10px;
+      min-height: 22px;
+      font-size: 0.93rem;
+      color: var(--muted);
+    }
+
+    .status.ok {
+      color: var(--ok);
+    }
+
+    .status.error {
+      color: var(--danger);
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .digit-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      background: linear-gradient(180deg, #ffffff, #fcfbf8);
+      animation: fade-up 0.4s ease;
+    }
+
+    .digit-card h3 {
+      margin: 0 0 8px;
+      font-size: 0.94rem;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .metric {
+      display: flex;
+      gap: 6px;
+      align-items: baseline;
+      margin: 2px 0;
+    }
+
+    .metric .label {
+      font-size: 0.83rem;
+      color: var(--muted);
+    }
+
+    .metric .value {
+      font-weight: 700;
+      font-size: 1.08rem;
+    }
+
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 0.92rem;
+    }
+
+    .history-table th,
+    .history-table td {
+      border-bottom: 1px solid var(--line);
+      padding: 8px;
+      text-align: left;
+    }
+
+    .history-table th {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .pill {
+      display: inline-block;
+      min-width: 36px;
+      text-align: center;
+      border-radius: 999px;
+      padding: 3px 10px;
+      background: #eaf3f4;
+      color: #15505f;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+
+    .delete-btn {
+      background: none;
+      border: 1px solid #d7c9b8;
+      color: var(--danger);
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .delete-btn:hover {
+      background: #fff5f3;
+      border-color: var(--danger);
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: grid;
+      place-items: center;
+      z-index: 9999;
+      padding: 20px;
+      animation: fade-overlay 0.3s ease;
+    }
+
+    .modal-content {
+      background: #fff;
+      border-radius: 20px;
+      width: min(520px, 100%);
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(15, 30, 35, 0.2);
+      animation: slide-up 0.4s ease;
+    }
+
+    .modal-header {
+      background: linear-gradient(110deg, #0f9d58 0%, #2b8a94 100%);
+      color: #fff;
+      padding: 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-family: "Fraunces", serif;
+      font-size: 1.8rem;
+      letter-spacing: 0.4px;
+    }
+
+    .modal-body {
+      padding: 24px;
+    }
+
+    .modal-subtitle {
+      margin: 0 0 20px;
+      color: var(--muted);
+      font-size: 0.995rem;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .summary-stat {
+      background: linear-gradient(135deg, #f0f8f6, #e8efe5);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      text-align: center;
+    }
+
+    .stat-label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      display: block;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .summary-section {
+      margin-bottom: 20px;
+    }
+
+    .summary-section h3 {
+      margin: 0 0 12px;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+    }
+
+    .averages-box {
+      background: #f8fbf9;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .avg-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 0.95rem;
+      border-bottom: 1px solid #e8efe5;
+    }
+
+    .avg-item:last-child {
+      border-bottom: none;
+    }
+
+    .avg-label {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .avg-val {
+      font-weight: 700;
+      color: #184c53;
+    }
+
+    .summary-history {
+      background: #f8fbf9;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .summary-history-item {
+      display: inline-block;
+      background: #eaf3f4;
+      color: #15505f;
+      padding: 4px 10px;
+      border-radius: 6px;
+      margin: 4px 4px 4px 0;
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--line);
+      text-align: center;
+    }
+
+    .modal-close-btn {
+      background: var(--accent);
+      color: #fff;
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 20px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+
+    .modal-close-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    @keyframes fade-overlay {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes slide-up {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .entry-count {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .suggestion-panel {
+      border: 1px dashed #b9c6bd;
+      background: linear-gradient(180deg, #f8fbf9, #f2f7f3);
+    }
+
+    .suggestion-title {
+      font-size: 0.92rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin: 0 0 6px;
+    }
+
+    .suggested-password {
+      margin: 0;
+      font-family: "Fraunces", serif;
+      font-size: clamp(1.8rem, 5vw, 2.4rem);
+      line-height: 1;
+      color: #184c53;
+      letter-spacing: 0.14em;
+    }
+
+    .suggested-note {
+      margin: 8px 0 0;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    @keyframes rise-in {
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fade-up {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 760px) {
+      .cards {
+        grid-template-columns: 1fr;
+      }
+
+      .input-row input {
+        flex: 1 1 100%;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" role="application" aria-label="3 digit combination tracker">
+    <section class="header">
+      <h1>3-Digit Combination Running Average</h1>
+      <p>Enter exactly three digits, store each digit by position, and track the running average for each position in real time.</p>
+    </section>
+
+    <section class="content">
+      <div class="panel">
+        <form id="comboForm" novalidate>
+          <div class="input-row">
+            <input
+              id="comboInput"
+              type="text"
+              inputmode="numeric"
+              maxlength="3"
+              placeholder="e.g. 739"
+              aria-label="3 digit combination"
+              autocomplete="off"
+            >
+            <button class="add-btn" type="submit">Add Combination</button>
+            <button class="clear-btn" id="clearBtn" type="button">Clear Data</button>
+          </div>
+          <div id="status" class="status" aria-live="polite"></div>
+        </form>
+      </div>
+
+      <div class="cards">
+        <article class="digit-card">
+          <h3>Digit 1</h3>
+          <div class="metric"><span class="label">Last:</span><span id="last1" class="value">-</span></div>
+          <div class="metric"><span class="label">Average:</span><span id="avg1" class="value">0.00</span></div>
+        </article>
+        <article class="digit-card">
+          <h3>Digit 2</h3>
+          <div class="metric"><span class="label">Last:</span><span id="last2" class="value">-</span></div>
+          <div class="metric"><span class="label">Average:</span><span id="avg2" class="value">0.00</span></div>
+        </article>
+        <article class="digit-card">
+          <h3>Digit 3</h3>
+          <div class="metric"><span class="label">Last:</span><span id="last3" class="value">-</span></div>
+          <div class="metric"><span class="label">Average:</span><span id="avg3" class="value">0.00</span></div>
+        </article>
+      </div>
+
+      <div class="panel suggestion-panel" aria-live="polite">
+        <p class="suggestion-title">Suggested Password</p>
+        <p id="suggestedPassword" class="suggested-password">---</p>
+        <p id="suggestedNote" class="suggested-note">Add at least one combination to generate an average-based suggestion.</p>
+      </div>
+
+      <div class="panel">
+        <strong>Combination History</strong>
+        <table class="history-table" aria-label="history of submitted combinations">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Combination</th>
+              <th>Digit 1</th>
+              <th>Digit 2</th>
+              <th>Digit 3</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+        <div id="entryCount" class="entry-count">Entries: 0</div>
+      </div>
+    </section>
+  </main>
+
+  <div id="summaryModal" style="display: none;" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🔓 Password Cracked!</h2>
+      </div>
+      <div class="modal-body">
+        <p class="modal-subtitle">Your averaging strategy converged on the correct lock combination.</p>
+        <div class="summary-grid">
+          <div class="summary-stat">
+            <div class="stat-label">Total Attempts</div>
+            <div class="stat-value" id="summaryAttempts">0</div>
+          </div>
+          <div class="summary-stat">
+            <div class="stat-label">Success Rate</div>
+            <div class="stat-value" id="summarySuccessRate">0%</div>
+          </div>
+          <div class="summary-stat">
+            <div class="stat-label">Final Guess</div>
+            <div class="stat-value" id="summaryFinalGuess">172</div>
+          </div>
+        </div>
+        <div class="summary-section">
+          <h3>Digit Averages at Success</h3>
+          <div class="averages-box">
+            <div class="avg-item"><span class="avg-label">Position 1:</span><span class="avg-val" id="summaryAvg1">0.00</span></div>
+            <div class="avg-item"><span class="avg-label">Position 2:</span><span class="avg-val" id="summaryAvg2">0.00</span></div>
+            <div class="avg-item"><span class="avg-label">Position 3:</span><span class="avg-val" id="summaryAvg3">0.00</span></div>
+          </div>
+        </div>
+        <div class="summary-section">
+          <h3>Combination History</h3>
+          <div class="summary-history" id="summaryHistory"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="closeModalBtn" class="modal-close-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const comboForm = document.getElementById("comboForm");
+    const comboInput = document.getElementById("comboInput");
+    const clearBtn = document.getElementById("clearBtn");
+    const statusEl = document.getElementById("status");
+    const historyBody = document.getElementById("historyBody");
+    const entryCount = document.getElementById("entryCount");
+    const suggestedPasswordEl = document.getElementById("suggestedPassword");
+    const suggestedNoteEl = document.getElementById("suggestedNote");
+    const summaryModal = document.getElementById("summaryModal");
+    const closeModalBtn = document.getElementById("closeModalBtn");
+
+    const ACTUAL_PASSWORD = "172";
+
+    const lastEls = [
+      document.getElementById("last1"),
+      document.getElementById("last2"),
+      document.getElementById("last3")
+    ];
+
+    const avgEls = [
+      document.getElementById("avg1"),
+      document.getElementById("avg2"),
+      document.getElementById("avg3")
+    ];
+
+    const digitBuckets = [[], [], []];
+    const history = [];
+
+    const STORAGE_KEY = "combo_tracker_data";
+
+    function saveToStorage() {
+      const data = {
+        digitBuckets,
+        history
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    function loadFromStorage() {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        try {
+          const data = JSON.parse(stored);
+          if (data.digitBuckets && Array.isArray(data.digitBuckets)) {
+            for (let i = 0; i < 3; i++) {
+              digitBuckets[i] = Array.isArray(data.digitBuckets[i]) ? data.digitBuckets[i] : [];
+            }
+          }
+          if (data.history && Array.isArray(data.history)) {
+            history.push(...data.history);
+          }
+        } catch (e) {
+          console.error("Failed to load stored data:", e);
+        }
+      }
+    }
+
+    function showStatus(message, type = "") {
+      statusEl.textContent = message;
+      statusEl.className = "status" + (type ? " " + type : "");
+    }
+
+    function isValidCombination(value) {
+      return /^\d{3}$/.test(value);
+    }
+
+    function averageOf(numbers) {
+      if (numbers.length === 0) {
+        return 0;
+      }
+      const total = numbers.reduce((sum, n) => sum + n, 0);
+      return total / numbers.length;
+    }
+
+    function currentAverages() {
+      return [
+        averageOf(digitBuckets[0]),
+        averageOf(digitBuckets[1]),
+        averageOf(digitBuckets[2])
+      ];
+    }
+
+    function scoreCandidate(candidateDigits, averages) {
+      const d1 = candidateDigits[0] - averages[0];
+      const d2 = candidateDigits[1] - averages[1];
+      const d3 = candidateDigits[2] - averages[2];
+      return (d1 * d1) + (d2 * d2) + (d3 * d3);
+    }
+
+    function buildSuggestedPassword(averages, usedCombinations) {
+      let bestCombo = null;
+      let bestScore = Number.POSITIVE_INFINITY;
+
+      for (let n = 0; n <= 999; n++) {
+        const combo = String(n).padStart(3, "0");
+        if (usedCombinations.has(combo)) {
+          continue;
+        }
+
+        const digits = combo.split("").map((d) => Number(d));
+        const score = scoreCandidate(digits, averages);
+
+        if (score < bestScore || (score === bestScore && combo < bestCombo)) {
+          bestScore = score;
+          bestCombo = combo;
+        }
+      }
+
+      return bestCombo;
+    }
+
+    function showSummaryModal(suggestion) {
+      const attempts = history.length;
+      document.getElementById("summaryAttempts").textContent = attempts;
+      document.getElementById("summarySuccessRate").textContent = attempts > 0 ? Math.round((1 / attempts) * 100) + "%" : "0%";
+      document.getElementById("summaryFinalGuess").textContent = suggestion;
+
+      const averages = currentAverages();
+      document.getElementById("summaryAvg1").textContent = averages[0].toFixed(2);
+      document.getElementById("summaryAvg2").textContent = averages[1].toFixed(2);
+      document.getElementById("summaryAvg3").textContent = averages[2].toFixed(2);
+
+      const historyHtml = history.map((entry) => 
+        "<span class='summary-history-item'>" + entry.combo + "</span>"
+      ).join("");
+      document.getElementById("summaryHistory").innerHTML = historyHtml;
+
+      summaryModal.style.display = "grid";
+    }
+
+    function closeSummaryModal() {
+      summaryModal.style.display = "none";
+    }
+
+    function renderSuggestedPassword() {
+      if (history.length === 0) {
+        suggestedPasswordEl.textContent = "---";
+        suggestedNoteEl.textContent = "Add at least one combination to generate an average-based suggestion.";
+        return;
+      }
+
+      const averages = currentAverages();
+      const usedCombinations = new Set(history.map((entry) => entry.combo));
+      const suggestion = buildSuggestedPassword(averages, usedCombinations);
+
+      if (!suggestion) {
+        suggestedPasswordEl.textContent = "N/A";
+        suggestedNoteEl.textContent = "All 3-digit combinations are already used.";
+        return;
+      }
+
+      suggestedPasswordEl.textContent = suggestion;
+      suggestedNoteEl.textContent = "Based on average digits "
+        + averages.map((avg) => avg.toFixed(2)).join(" / ")
+        + ", excluding any combination already submitted.";
+
+      if (suggestion === ACTUAL_PASSWORD) {
+        showSummaryModal(suggestion);
+      }
+    }
+
+    function renderSummary() {
+      for (let i = 0; i < 3; i++) {
+        const bucket = digitBuckets[i];
+        const lastValue = bucket.length ? bucket[bucket.length - 1] : "-";
+        lastEls[i].textContent = String(lastValue);
+        avgEls[i].textContent = averageOf(bucket).toFixed(2);
+      }
+
+      entryCount.textContent = "Entries: " + history.length;
+      renderSuggestedPassword();
+    }
+
+    function deleteEntry(indexToDelete) {
+      const entry = history[indexToDelete];
+      if (!entry) return;
+
+      for (let i = 0; i < 3; i++) {
+        const bucketIndex = digitBuckets[i].indexOf(entry.digits[i]);
+        if (bucketIndex !== -1) {
+          digitBuckets[i].splice(bucketIndex, 1);
+        }
+      }
+
+      history.splice(indexToDelete, 1);
+      saveToStorage();
+      renderSummary();
+      renderHistory();
+      showStatus("Deleted combination " + entry.combo + ".", "ok");
+    }
+
+    function renderHistory() {
+      historyBody.innerHTML = "";
+
+      history.forEach((entry, index) => {
+        const row = document.createElement("tr");
+        const delBtn = document.createElement("button");
+        delBtn.className = "delete-btn";
+        delBtn.textContent = "Delete";
+        delBtn.type = "button";
+        delBtn.onclick = (event) => {
+          event.preventDefault();
+          deleteEntry(index);
+        };
+
+        row.innerHTML = ""
+          + "<td>" + (index + 1) + "</td>"
+          + "<td><span class=\"pill\">" + entry.combo + "</span></td>"
+          + "<td>" + entry.digits[0] + "</td>"
+          + "<td>" + entry.digits[1] + "</td>"
+          + "<td>" + entry.digits[2] + "</td>"
+          + "<td></td>";
+
+        row.querySelector("td:last-child").appendChild(delBtn);
+        historyBody.appendChild(row);
+      });
+    }
+
+    comboForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const value = comboInput.value.trim();
+
+      if (!isValidCombination(value)) {
+        showStatus("Please enter exactly 3 digits (0-9).", "error");
+        return;
+      }
+
+      const digits = value.split("").map((digit) => Number(digit));
+
+      digits.forEach((digit, i) => {
+        digitBuckets[i].push(digit);
+      });
+
+      history.push({ combo: value, digits });
+
+      saveToStorage();
+      renderSummary();
+      renderHistory();
+      showStatus("Stored combination " + value + " and updated running averages.", "ok");
+
+      comboInput.value = "";
+      comboInput.focus();
+    });
+
+    clearBtn.addEventListener("click", () => {
+      for (let i = 0; i < digitBuckets.length; i++) {
+        digitBuckets[i] = [];
+      }
+
+      history.length = 0;
+      saveToStorage();
+      renderSummary();
+      renderHistory();
+      showStatus("All stored combinations and averages were cleared.", "ok");
+      comboInput.focus();
+    });
+
+    closeModalBtn.addEventListener("click", closeSummaryModal);
+
+    summaryModal.addEventListener("click", (event) => {
+      if (event.target === summaryModal) {
+        closeSummaryModal();
+      }
+    });
+
+    loadFromStorage();
+    renderSummary();
+    renderHistory();
+  </script>
+</body>
+</html>
