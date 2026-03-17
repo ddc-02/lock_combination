@@ -818,13 +818,18 @@
 
     const digitBuckets = [[], [], []];
     const history = [];
+    const rejectedSuggestions = {
+      avg: [],
+      median: []
+    };
 
     const STORAGE_KEY = "combo_tracker_data";
 
     function saveToStorage() {
       const data = {
         digitBuckets,
-        history
+        history,
+        rejectedSuggestions
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     }
@@ -841,6 +846,14 @@
           }
           if (data.history && Array.isArray(data.history)) {
             history.push(...data.history);
+          }
+          if (data.rejectedSuggestions && typeof data.rejectedSuggestions === "object") {
+            rejectedSuggestions.avg = Array.isArray(data.rejectedSuggestions.avg)
+              ? data.rejectedSuggestions.avg
+              : [];
+            rejectedSuggestions.median = Array.isArray(data.rejectedSuggestions.median)
+              ? data.rejectedSuggestions.median
+              : [];
           }
         } catch (e) {
           console.error("Failed to load stored data:", e);
@@ -923,6 +936,14 @@
       return bestCombo;
     }
 
+    function trackRejectedSuggestion(list, suggestion) {
+      if (!suggestion || suggestion === ACTUAL_PASSWORD || list.includes(suggestion)) {
+        return false;
+      }
+      list.push(suggestion);
+      return true;
+    }
+
     function showSummaryModal(suggestion) {
       const attempts = history.length;
       document.getElementById("summaryAttempts").textContent = attempts;
@@ -958,9 +979,14 @@
       const averages = currentAverages();
       const medians = currentMedians();
       const usedCombinations = new Set(history.map((entry) => entry.combo));
+      const excludedCombinations = new Set([
+        ...usedCombinations,
+        ...rejectedSuggestions.avg,
+        ...rejectedSuggestions.median
+      ]);
       
-      const suggestionAvg = buildSuggestedPassword(averages, usedCombinations);
-      const suggestionMed = buildSuggestedPassword(medians, usedCombinations);
+      const suggestionAvg = buildSuggestedPassword(averages, excludedCombinations);
+      const suggestionMed = buildSuggestedPassword(medians, excludedCombinations);
 
       // Render average suggestion
       if (!suggestionAvg) {
@@ -986,6 +1012,13 @@
       if (suggestionAvg === ACTUAL_PASSWORD || suggestionMed === ACTUAL_PASSWORD) {
         const finalSuggestion = suggestionAvg === ACTUAL_PASSWORD ? suggestionAvg : suggestionMed;
         showSummaryModal(finalSuggestion);
+        return;
+      }
+
+      const didTrackAvg = trackRejectedSuggestion(rejectedSuggestions.avg, suggestionAvg);
+      const didTrackMed = trackRejectedSuggestion(rejectedSuggestions.median, suggestionMed);
+      if (didTrackAvg || didTrackMed) {
+        saveToStorage();
       }
     }
 
@@ -1073,11 +1106,19 @@
     });
 
     clearBtn.addEventListener("click", () => {
+      const shouldClear = window.confirm("Clear all stored combinations, averages, and suggestion history?");
+      if (!shouldClear) {
+        showStatus("Clear cancelled.");
+        return;
+      }
+
       for (let i = 0; i < digitBuckets.length; i++) {
         digitBuckets[i] = [];
       }
 
       history.length = 0;
+      rejectedSuggestions.avg = [];
+      rejectedSuggestions.median = [];
       saveToStorage();
       renderSummary();
       renderHistory();
