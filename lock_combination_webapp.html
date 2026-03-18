@@ -896,19 +896,33 @@
       if (numbers.length === 0) {
         return 0;
       }
-      const total = numbers.reduce((sum, n) => sum + n, 0);
-      return total / numbers.length;
+
+      const angleScale = (2 * Math.PI) / 10;
+      const sinSum = numbers.reduce((sum, digit) => sum + Math.sin(digit * angleScale), 0);
+      const cosSum = numbers.reduce((sum, digit) => sum + Math.cos(digit * angleScale), 0);
+
+      let meanAngle = Math.atan2(sinSum, cosSum);
+      if (meanAngle < 0) {
+        meanAngle += 2 * Math.PI;
+      }
+
+      return (meanAngle * 10) / (2 * Math.PI);
     }
 
-    function standardDeviationOf(numbers, mean = averageOf(numbers)) {
+    function standardDeviationOf(numbers) {
       if (numbers.length === 0) {
         return 0;
       }
-      const variance = numbers.reduce((sum, n) => {
-        const diff = n - mean;
-        return sum + (diff * diff);
-      }, 0) / numbers.length;
-      return Math.sqrt(variance);
+
+      const angleScale = (2 * Math.PI) / 10;
+      const sinSum = numbers.reduce((sum, digit) => sum + Math.sin(digit * angleScale), 0);
+      const cosSum = numbers.reduce((sum, digit) => sum + Math.cos(digit * angleScale), 0);
+      const resultantLength = Math.sqrt((sinSum * sinSum) + (cosSum * cosSum));
+      const R = resultantLength / numbers.length;
+
+      // Clamp R for numerical stability near 0 and 1.
+      const safeR = Math.min(1, Math.max(R, 1e-12));
+      return Math.sqrt(-2 * Math.log(safeR)) * 10 / (2 * Math.PI);
     }
 
     function medianOf(numbers) {
@@ -950,7 +964,7 @@
     function currentPositionStats() {
       return digitBuckets.map((bucket) => {
         const mean = averageOf(bucket);
-        const stdDev = standardDeviationOf(bucket, mean);
+        const stdDev = standardDeviationOf(bucket);
         const entries = bucket.length;
         const isLocked = entries >= LOCK_MIN_ENTRIES && stdDev < LOCK_STD_DEV_THRESHOLD;
         return {
