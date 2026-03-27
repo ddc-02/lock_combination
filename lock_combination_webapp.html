@@ -24,9 +24,14 @@
       box-sizing: border-box;
     }
 
+    html {
+      overflow-x: hidden;
+    }
+
     body {
       margin: 0;
       min-height: 100vh;
+      overflow-x: hidden;
       font-family: "Space Grotesk", sans-serif;
       color: var(--ink);
       background:
@@ -40,6 +45,7 @@
 
     .app {
       width: min(920px, 100%);
+      max-width: 100%;
       background: var(--card);
       border: 1px solid var(--line);
       border-radius: 20px;
@@ -72,6 +78,7 @@
       display: grid;
       gap: 18px;
       padding: 22px;
+      overflow: hidden;
     }
 
     .panel {
@@ -79,6 +86,8 @@
       border: 1px solid var(--line);
       border-radius: 14px;
       padding: 16px;
+      overflow-x: auto;
+      max-width: 100%;
     }
 
     .input-row {
@@ -191,6 +200,7 @@
       border-collapse: collapse;
       margin-top: 8px;
       font-size: 0.92rem;
+      min-width: 400px;
     }
 
     .history-table th,
@@ -531,6 +541,8 @@
     .suggestion-panel {
       border: 1px dashed #b9c6bd;
       background: linear-gradient(180deg, #f8fbf9, #f2f7f3);
+      overflow: hidden;
+      word-break: break-word;
     }
 
     .suggestion-title {
@@ -798,6 +810,11 @@
         font-size: 0.85rem;
         margin: 3px 3px 3px 0;
       }
+
+      .summary-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
     }
   </style>
 </head>
@@ -858,16 +875,15 @@
             <p class="suggestion-title">📊 Average-Based</p>
             <p id="suggestedPassword" class="suggested-password">---</p>
             <p id="suggestedNote" class="suggested-note">Add at least one combination to generate a suggestion.</p>
-            <button id="notThisAvgBtn" class="not-this-btn" type="button" disabled>🚫 Not this</button>
           </div>
           <div>
             <p class="suggestion-title">📈 Median-Based</p>
             <p id="suggestedPasswordMedian" class="suggested-password">---</p>
             <p id="suggestedNoteMedian" class="suggested-note">Add at least one combination to generate a suggestion.</p>
-            <button id="notThisMedianBtn" class="not-this-btn" type="button" disabled>🚫 Not this</button>
           </div>
         </div>
-        <div id="blacklistInfo" style="margin-top: 10px; font-size: 0.84rem; color: var(--muted);"></div>
+        <button id="notTheseBtn" class="not-this-btn" type="button" disabled style="width: 100%; margin-top: 12px;">Not These</button>
+        <div id="blacklistInfo" style="margin-top: 12px; padding: 10px 14px; font-size: 0.88rem; color: var(--muted); background: #f0f5f2; border-radius: 8px; border: 1px solid var(--line); display: none;"></div>
       </div>
 
       <div class="panel">
@@ -893,7 +909,7 @@
   <div id="summaryModal" style="display: none;" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>🔓 Password Cracked!</h2>
+        <h2>Password Cracked!</h2>
       </div>
       <div class="modal-body">
         <p class="modal-subtitle">Your averaging strategy converged on the correct lock combination.</p>
@@ -933,7 +949,7 @@
   <div id="blacklistModal" style="display: none;" class="modal-overlay">
     <div class="modal-content">
       <div class="blacklist-modal-header">
-        <h2>📋 Past Entries/Guesses</h2>
+        <h2>Past Entries/Guesses</h2>
       </div>
       <div class="modal-body">
         <p class="blacklist-summary" id="blacklistSummary"></p>
@@ -959,8 +975,7 @@
     const suggestedNoteMedianEl = document.getElementById("suggestedNoteMedian");
     const summaryModal = document.getElementById("summaryModal");
     const closeModalBtn = document.getElementById("closeModalBtn");
-    const notThisAvgBtn = document.getElementById("notThisAvgBtn");
-    const notThisMedianBtn = document.getElementById("notThisMedianBtn");
+    const notTheseBtn = document.getElementById("notTheseBtn");
     const blacklistInfoEl = document.getElementById("blacklistInfo");
     const blacklistModal = document.getElementById("blacklistModal");
     const closeBlacklistModalBtn = document.getElementById("closeBlacklistModalBtn");
@@ -1223,22 +1238,18 @@
         suggestedNoteEl.textContent = "Add at least one combination to generate a suggestion.";
         suggestedPasswordMedianEl.textContent = "---";
         suggestedNoteMedianEl.textContent = "Add at least one combination to generate a suggestion.";
-        notThisAvgBtn.disabled = true;
-        notThisMedianBtn.disabled = true;
+        notTheseBtn.disabled = true;
         currentSuggestionAvg = null;
         currentSuggestionMed = null;
         blacklistInfoEl.textContent = "";
+        blacklistInfoEl.style.display = "none";
         return;
       }
 
       const averages = currentAverages();
       const medians = currentMedians();
       const positionStats = currentPositionStats();
-      const usedCombinations = new Set(history.map((entry) => entry.combo));
-      const excludedCombinations = new Set([
-        ...usedCombinations,
-        ...rejectedSuggestions
-      ]);
+      const excludedCombinations = new Set(rejectedSuggestions);
       
       const suggestionAvg = buildSuggestedPassword(averages, excludedCombinations, positionStats);
       const suggestionMed = buildSuggestedPassword(medians, excludedCombinations);
@@ -1276,36 +1287,38 @@
       if (!suggestionAvg) {
         suggestedPasswordEl.textContent = "N/A";
         suggestedNoteEl.textContent = "All 3-digit combinations are already used.";
-        notThisAvgBtn.disabled = true;
       } else {
         suggestedPasswordEl.textContent = suggestionAvg;
         suggestedNoteEl.textContent = "Based on averages: "
           + averages.map((avg) => avg.toFixed(2)).join(" / ")
-          + " | Locked: " + lockedPositions + "/3"
-          + " | Pool: " + avgPool;
-        notThisAvgBtn.disabled = false;
+          + " | Locked: " + lockedPositions + "/3";
       }
 
       // Render median suggestion
       if (!suggestionMed) {
         suggestedPasswordMedianEl.textContent = "N/A";
         suggestedNoteMedianEl.textContent = "All 3-digit combinations are already used.";
-        notThisMedianBtn.disabled = true;
       } else {
         suggestedPasswordMedianEl.textContent = suggestionMed;
         suggestedNoteMedianEl.textContent = "Based on medians: "
-          + medians.join(" / ")
-          + " | Pool: " + medPool;
-        notThisMedianBtn.disabled = false;
+          + medians.join(" / ");
       }
 
-      // Show blacklist info
-      if (rejectedSuggestions.length > 0) {
-        blacklistInfoEl.innerHTML = "🚫 Rejected suggestions: " + rejectedSuggestions.length
-          + " <button class='view-blacklist-btn' type='button' onclick='openBlacklistModal()'>View</button>";
-      } else {
-        blacklistInfoEl.textContent = "";
+      // Enable "Not These" button if at least one suggestion exists
+      notTheseBtn.disabled = !suggestionAvg && !suggestionMed;
+
+      // Show pool and blacklist info
+      const entryBlacklisted = new Set(history.map((e) => e.combo)).size;
+      const totalBlacklisted = rejectedSuggestions.length;
+      const rejectedOnly = totalBlacklisted - entryBlacklisted;
+      let infoHtml = "Remaining candidate pool: <strong>" + avgPool + "</strong>"
+        + " &nbsp;|&nbsp; Blacklisted: <strong>" + totalBlacklisted + "</strong>"
+        + " (" + entryBlacklisted + " entries + " + rejectedOnly + " rejected suggestions)";
+      if (totalBlacklisted > 0) {
+        infoHtml += " &nbsp;&nbsp;<button class='view-blacklist-btn' type='button' onclick='openBlacklistModal()'>View</button>";
       }
+      blacklistInfoEl.innerHTML = infoHtml;
+      blacklistInfoEl.style.display = "block";
 
       // Check if either suggestion matches the password
       if (suggestionAvg === ACTUAL_PASSWORD || suggestionMed === ACTUAL_PASSWORD) {
@@ -1395,6 +1408,7 @@
       });
 
       history.push({ combo: value, digits });
+      trackRejectedSuggestion(rejectedSuggestions, value);
 
       saveToStorage();
       renderSummary();
@@ -1427,20 +1441,19 @@
 
     closeModalBtn.addEventListener("click", closeSummaryModal);
 
-    notThisAvgBtn.addEventListener("click", () => {
+    notTheseBtn.addEventListener("click", () => {
+      const rejected = [];
       if (currentSuggestionAvg) {
         trackRejectedSuggestion(rejectedSuggestions, currentSuggestionAvg);
-        saveToStorage();
-        showStatus("Rejected average suggestion " + currentSuggestionAvg + ".", "ok");
-        renderSuggestedPassword();
+        rejected.push(currentSuggestionAvg);
       }
-    });
-
-    notThisMedianBtn.addEventListener("click", () => {
-      if (currentSuggestionMed) {
+      if (currentSuggestionMed && currentSuggestionMed !== currentSuggestionAvg) {
         trackRejectedSuggestion(rejectedSuggestions, currentSuggestionMed);
+        rejected.push(currentSuggestionMed);
+      }
+      if (rejected.length > 0) {
         saveToStorage();
-        showStatus("Rejected median suggestion " + currentSuggestionMed + ".", "ok");
+        showStatus("Rejected suggestions: " + rejected.join(", ") + ".", "ok");
         renderSuggestedPassword();
       }
     });
@@ -1458,10 +1471,20 @@
         blacklistSummaryEl.textContent = "";
       } else {
         blacklistEmptyEl.style.display = "none";
-        blacklistSummaryEl.textContent = "Total rejected guesses: " + rejectedSuggestions.length;
-        rejectedSuggestions.forEach((combo) => {
+        const entryCombos = new Set(history.map((e) => e.combo));
+        const entryCount = entryCombos.size;
+        const rejectedOnly = rejectedSuggestions.length - entryCount;
+        blacklistSummaryEl.textContent = "Total blacklisted: " + rejectedSuggestions.length
+          + " (" + entryCount + " entries + " + rejectedOnly + " rejected suggestions)";
+        const sorted = [...rejectedSuggestions].sort((a, b) => Number(a) - Number(b));
+        sorted.forEach((combo) => {
           const li = document.createElement("li");
           li.textContent = combo;
+          if (entryCombos.has(combo)) {
+            li.style.background = "#eaf3f4";
+            li.style.color = "#15505f";
+            li.style.borderColor = "#b5c3ba";
+          }
           blacklistListEl.appendChild(li);
         });
       }
